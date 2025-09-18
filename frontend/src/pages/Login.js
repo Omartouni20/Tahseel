@@ -30,7 +30,9 @@ export default function Login() {
       if (res.data.role === "User") navigate("/user");
       else if (res.data.role === "Accountant") navigate("/accountant");
       else if (res.data.role === "Admin") navigate("/admin");
+      else if (res.data.role === "BranchManager") navigate("/branch-manager"); // ✅ جديد
       else navigate("/");
+
     } catch (error) {
       setError(error.response?.data?.message || "Login failed");
     } finally {

@@ -122,8 +122,10 @@ export default function AccountantDashboard() {
       setForms(tableRes.data || []);
 
       // دمج نتائج الكروت من الثلاث حالات
-      const mergedForCards = cardsRes.flatMap((r) => r?.data || []);
-      setFormsAll(mergedForCards);
+// دمج نتائج الكروت من الثلاث حالات + إزالة التكرار
+const mergedForCards = cardsRes.flatMap((r) => r?.data || []);
+const uniqueForms = Array.from(new Map(mergedForCards.map(f => [f._id, f])).values());
+setFormsAll(uniqueForms);
     } catch (e) {
       console.error(e);
       setErrorMsg(e?.response?.data?.message || "تعذّر تحميل التقارير");

@@ -1,3 +1,4 @@
+// controllers/formController.js
 const Form = require("../models/Form");
 const ReportTemplate = require("../models/ReportTemplate");
 
@@ -58,6 +59,7 @@ function mapOut(f) {
 
     status: f.status || "draft",
     accountantRelease: f.accountantRelease || { status: "pending" },
+    branchManagerRelease: f.branchManagerRelease || { status: "pending" },
     adminRelease: f.adminRelease || { status: "pending" },
 
     adminNote: f.adminNote || "",
@@ -107,6 +109,7 @@ const createForm = async (req, res) => {
       bankCollections: bankLine,
 
       accountantRelease: { status: "pending" },
+      branchManagerRelease: { status: "pending" },
       adminRelease: { status: "pending" },
       status: "draft",
     });
@@ -180,74 +183,12 @@ const releaseForm = async (req, res) => {
 
     form.accountantRelease = { status: "released", by: req.user._id, at: new Date() };
     form.status = "released";
-
     await form.save();
 
-    const populated = await form.populate([
-      { path: "branch", select: "name" },
-      { path: "user", select: "name" },
-      { path: "reviewedBy", select: "name" }
-    ]);
-
+    const populated = await form.populate([{ path: "branch", select: "name" }, { path: "user", select: "name" }]);
     return res.json({ message: "Form released by accountant", form: populated });
   } catch (error) {
     console.error("❌ releaseForm error:", error);
-    return res.status(500).json({ message: error.message });
-  }
-};
-
-// 🟣 Release الأدمن + fallback + console
-const adminReleaseForm = async (req, res) => {
-  try {
-    const { id } = req.params;
-    const { note = "", receivedCash, receivedApps, receivedBank } = req.body;
-
-    console.log("📥 Admin release body:", req.body);
-
-    const form = await Form.findById(id);
-    if (!form) return res.status(404).json({ message: "Form not found" });
-
-    if (form.accountantRelease?.status !== "released") {
-      return res.status(400).json({ message: "يجب عمل Release من المحاسب أولًا" });
-    }
-
-    const fallbackCash = Number(form.cashCollection || 0);
-    const fallbackApps = (form.applications || []).reduce((s, a) => s + Number(a?.amount || 0), 0);
-    const fallbackBank = (form.bankCollections || []).reduce((s, b) => s + Number(b?.amount || 0), 0);
-
-    form.adminRelease = { status: "released", by: req.user._id, at: new Date() };
-    form.adminNote = String(note || "");
-
-    form.receivedCash = receivedCash !== undefined && receivedCash !== ""
-      ? Number(receivedCash) || 0
-      : fallbackCash;
-
-    form.receivedApps = receivedApps !== undefined && receivedApps !== ""
-      ? Number(receivedApps) || 0
-      : fallbackApps;
-
-    form.receivedBank = receivedBank !== undefined && receivedBank !== ""
-      ? Number(receivedBank) || 0
-      : fallbackBank;
-
-    form.status = "released";
-
-    await form.save();
-
-    const populated = await form.populate([
-      { path: "branch", select: "name" },
-      { path: "user", select: "name" }
-    ]);
-
-    console.log("✅ Form saved with received values:", {
-      receivedCash: form.receivedCash,
-      receivedApps: form.receivedApps,
-      receivedBank: form.receivedBank
-    });
-
-    return res.json({ message: "Form released by admin", form: mapOut(populated) });
-  } catch (error) {
-    console.error("❌ adminReleaseForm error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -263,15 +204,119 @@ const rejectForm = async (req, res) => {
     form.status = "rejected";
     await form.save();
 
-    const populated = await form.populate([
-      { path: "branch", select: "name" },
-      { path: "user", select: "name" },
-      { path: "reviewedBy", select: "name" }
-    ]);
-
+    const populated = await form.populate([{ path: "branch", select: "name" }, { path: "user", select: "name" }]);
     return res.json({ message: "Form rejected successfully", form: populated });
   } catch (error) {
     console.error("❌ rejectForm error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// 🟣 Release مدير الفرع
+const branchManagerReleaseForm = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { note = "" } = req.body;
+    const form = await Form.findById(id);
+    if (!form) return res.status(404).json({ message: "Form not found" });
+
+    if (form.accountantRelease?.status !== "released") {
+      return res.status(400).json({ message: "يجب عمل Release من المحاسب أولًا" });
+    }
+
+    form.branchManagerRelease = { status: "released", by: req.user._id, at: new Date(), note };
+    await form.save();
+
+    const populated = await form.populate([{ path: "branch", select: "name" }, { path: "user", select: "name" }]);
+    return res.json({ message: "Form released by branch manager", form: mapOut(populated) });
+  } catch (error) {
+    console.error("❌ branchManagerReleaseForm error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// 🟣 Reject مدير الفرع
+const branchManagerRejectForm = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { note = "" } = req.body;
+    const form = await Form.findById(id);
+    if (!form) return res.status(404).json({ message: "Form not found" });
+
+    if (form.accountantRelease?.status !== "released") {
+      return res.status(400).json({ message: "يجب عمل Release من المحاسب أولًا" });
+    }
+
+    form.branchManagerRelease = { status: "rejected", by: req.user._id, at: new Date(), note };
+    form.status = "rejected";
+    await form.save();
+
+    const populated = await form.populate([{ path: "branch", select: "name" }, { path: "user", select: "name" }]);
+    return res.json({ message: "Form rejected by branch manager", form: mapOut(populated) });
+  } catch (error) {
+    console.error("❌ branchManagerRejectForm error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// 🔵 Release الأدمن
+const adminReleaseForm = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { note = "", receivedCash, receivedApps, receivedBank } = req.body;
+    const form = await Form.findById(id);
+    if (!form) return res.status(404).json({ message: "Form not found" });
+
+    if (form.accountantRelease?.status !== "released") {
+      return res.status(400).json({ message: "يجب عمل Release من المحاسب أولًا" });
+    }
+    if (form.branchManagerRelease?.status !== "released") {
+      return res.status(400).json({ message: "يجب عمل Release من مدير الفرع أولًا" });
+    }
+
+    const fallbackCash = Number(form.cashCollection || 0);
+    const fallbackApps = (form.applications || []).reduce((s, a) => s + Number(a?.amount || 0), 0);
+    const fallbackBank = (form.bankCollections || []).reduce((s, b) => s + Number(b?.amount || 0), 0);
+
+    form.adminRelease = { status: "released", by: req.user._id, at: new Date() };
+    form.adminNote = String(note || "");
+
+    form.receivedCash = receivedCash !== undefined ? Number(receivedCash) || 0 : fallbackCash;
+    form.receivedApps = receivedApps !== undefined ? Number(receivedApps) || 0 : fallbackApps;
+    form.receivedBank = receivedBank !== undefined ? Number(receivedBank) || 0 : fallbackBank;
+
+    form.status = "released";
+    await form.save();
+
+    const populated = await form.populate([{ path: "branch", select: "name" }, { path: "user", select: "name" }]);
+    return res.json({ message: "Form released by admin", form: mapOut(populated) });
+  } catch (error) {
+    console.error("❌ adminReleaseForm error:", error);
+    return res.status(500).json({ message: error.message });
+  }
+};
+
+// 🔵 Reject الأدمن
+const adminRejectForm = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { note = "" } = req.body;
+    const form = await Form.findById(id);
+    if (!form) return res.status(404).json({ message: "Form not found" });
+
+    if (form.accountantRelease?.status !== "released") {
+      return res.status(400).json({ message: "يجب عمل Release من المحاسب أولًا" });
+    }
+
+    form.adminRelease = { status: "rejected", by: req.user._id, at: new Date() };
+    form.adminNote = String(note || "");
+    form.status = "rejected";
+    await form.save();
+
+    const populated = await form.populate([{ path: "branch", select: "name" }, { path: "user", select: "name" }]);
+    return res.json({ message: "Form rejected by admin", form: mapOut(populated) });
+  } catch (error) {
+    console.error("❌ adminRejectForm error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -289,11 +334,10 @@ const getMyForms = async (req, res) => {
   }
 };
 
-// (قديم) Accountant review
+// 🟡 Accountant review list
 const listFormsForReview = async (req, res) => {
   try {
     const { branchId, startDate, endDate, status } = req.query;
-
     const filters = {};
     if (branchId) filters.branch = branchId;
     if (startDate || endDate) {
@@ -301,13 +345,8 @@ const listFormsForReview = async (req, res) => {
       if (startDate) filters.formDate.$gte = new Date(startDate);
       if (endDate) filters.formDate.$lte = new Date(endDate);
     }
-
-    // 🛠️ استبعاد أي تقارير مرفوضة نهائيًا
-    if (status === "released") {
-      filters.status = "released";
-    } else {
-      filters.status = { $nin: ["rejected"] };
-    }
+    if (status === "released") filters.status = "released";
+    else filters.status = { $nin: ["rejected"] };
 
     const forms = await Form.find(filters)
       .populate("branch", "name")
@@ -321,12 +360,11 @@ const listFormsForReview = async (req, res) => {
   }
 };
 
-// (جديد) Admin listing
+// 🔵 Admin listing
 const listFormsForAdmin = async (req, res) => {
   try {
     const { branchId, startDate, endDate, q = "", adminStatus = "" } = req.query;
-
-    const filters = { "accountantRelease.status": "released" };
+    const filters = { "accountantRelease.status": "released", "branchManagerRelease.status": "released" };
     if (branchId) filters.branch = branchId;
     if (startDate || endDate) {
       filters.formDate = {};
@@ -340,7 +378,6 @@ const listFormsForAdmin = async (req, res) => {
       const rx = new RegExp(q.trim(), "i");
       or.push({ notes: rx });
     }
-
     const query = or.length ? { $and: [filters, { $or: or }] } : filters;
 
     const forms = await Form.find(query)
@@ -355,33 +392,34 @@ const listFormsForAdmin = async (req, res) => {
   }
 };
 
-// (جديد) Admin reject
-const adminRejectForm = async (req, res) => {
+// 🟣 Branch Manager listing
+const listFormsForBranchManager = async (req, res) => {
   try {
-    const { id } = req.params;
-    const { note = "" } = req.body;
+    const { startDate, endDate, q = "" } = req.query;
+    const filters = { "accountantRelease.status": "released" };
+    filters.branch = { $in: req.user.assignedBranches || [] };
 
-    const form = await Form.findById(id);
-    if (!form) return res.status(404).json({ message: "Form not found" });
-
-    if (form.accountantRelease?.status !== "released") {
-      return res.status(400).json({ message: "يجب عمل Release من المحاسب أولًا" });
+    if (startDate || endDate) {
+      filters.formDate = {};
+      if (startDate) filters.formDate.$gte = new Date(startDate);
+      if (endDate) filters.formDate.$lte = new Date(endDate);
     }
 
-    form.adminRelease = { status: "rejected", by: req.user._id, at: new Date() };
-    form.adminNote = String(note || "");
-    form.status = "rejected";
+    const or = [];
+    if (q.trim()) {
+      const rx = new RegExp(q.trim(), "i");
+      or.push({ notes: rx });
+    }
+    const query = or.length ? { $and: [filters, { $or: or }] } : filters;
 
-    await form.save();
+    const forms = await Form.find(query)
+      .populate("branch", "name")
+      .populate("user", "name")
+      .sort({ formDate: -1, createdAt: -1 });
 
-    const populated = await form.populate([
-      { path: "branch", select: "name" },
-      { path: "user", select: "name" }
-    ]);
-
-    return res.json({ message: "Form rejected by admin", form: mapOut(populated) });
+    return res.json(forms.map(mapOut));
   } catch (error) {
-    console.error("❌ adminRejectForm error:", error);
+    console.error("listFormsForBranchManager error:", error);
     return res.status(500).json({ message: error.message });
   }
 };
@@ -391,9 +429,12 @@ module.exports = {
   updateForm,
   getMyForms,
   releaseForm,
-  adminReleaseForm,
   rejectForm,
+  branchManagerReleaseForm,
+  branchManagerRejectForm,
+  adminReleaseForm,
+  adminRejectForm,
   listFormsForReview,
   listFormsForAdmin,
-  adminRejectForm,
+  listFormsForBranchManager,
 };

@@ -13,7 +13,7 @@ const createUser = async (req, res) => {
     }
 
     // تأكد إن الدور واحد من القيم المسموحة
-    const allowedRoles = ["User", "Accountant", "Admin"];
+    const allowedRoles = ["User", "Accountant", "Admin", "BranchManager"];
     if (!allowedRoles.includes(role)) {
       return res.status(400).json({ message: "Invalid role" });
     }

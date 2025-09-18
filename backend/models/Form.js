@@ -1,3 +1,4 @@
+// models/Form.js
 const mongoose = require("mongoose");
 
 const lineItem = new mongoose.Schema({
@@ -11,40 +12,44 @@ const formSchema = new mongoose.Schema({
   branch: { type: mongoose.Schema.Types.ObjectId, ref: "Branch", required: true },
   formDate: { type: Date, required: true },
 
-  // قديم
   pettyCash: { type: Number, default: 0 },
   purchases: { type: Number, default: 0 },
   cashCollection: { type: Number, default: 0 },
   bankMada: { type: Number, default: 0 },
   bankVisa: { type: Number, default: 0 },
 
-  // جديد
   actualSales: { type: Number, default: 0 },
   notes: { type: String, default: "" },
 
   applications: [lineItem],
   bankCollections: [lineItem],
 
-  // Totals
   appsTotal: { type: Number, default: 0 },
   bankTotal: { type: Number, default: 0 },
   totalSales: { type: Number, default: 0 },
 
   status: { type: String, enum: ["draft", "released", "rejected"], default: "draft" },
 
-  // Releases
   accountantRelease: {
     status: { type: String, enum: ["pending", "released", "rejected"], default: "pending" },
     by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     at: { type: Date }
   },
+
+  // ✅ جديد
+  branchManagerRelease: {
+    status: { type: String, enum: ["pending", "released", "rejected"], default: "pending" },
+    by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
+    at: { type: Date },
+    note: { type: String, default: "" }
+  },
+
   adminRelease: {
     status: { type: String, enum: ["pending", "released", "rejected"], default: "pending" },
     by: { type: mongoose.Schema.Types.ObjectId, ref: "User" },
     at: { type: Date }
   },
 
-  // (جديد) ملاحظات وأرقام الإدمن عند الاستلام
   adminNote: { type: String, default: "" },
   receivedCash: { type: Number, default: 0 },
   receivedApps: { type: Number, default: 0 },
@@ -58,17 +63,15 @@ function sum(arr, key = "amount") {
 }
 
 formSchema.pre("save", function (next) {
-  const legacyBank = (this.bankMada || 0) + (this.bankVisa || 0);
   this.appsTotal = sum(this.applications);
-  const bankDyn = sum(this.bankCollections);
-  this.bankTotal = bankDyn + legacyBank;
+  this.bankTotal = sum(this.bankCollections);
   this.totalSales = (this.cashCollection || 0) + this.bankTotal + this.appsTotal;
   next();
 });
 
-// اندكس يساعد في الفلاتر
 formSchema.index({
   "accountantRelease.status": 1,
+  "branchManagerRelease.status": 1,
   "adminRelease.status": 1,
   branch: 1,
   formDate: -1,

@@ -1,6 +1,6 @@
 // controllers/branchController.js
 const Branch = require("../models/Branch");
-const Form = require("../models/Form");   // لاستخدام فحص الارتباط قبل الحذف (اختياري لكن مفيد)
+const Form = require("../models/Form");
 const User = require("../models/User");
 
 // إضافة فرع جديد (Admin)
@@ -58,22 +58,25 @@ const updateBranch = async (req, res) => {
   }
 };
 
-// حذف فرع (Admin)
+// حذف فرع (Admin) - Cascade Delete
 const deleteBranch = async (req, res) => {
   try {
     const { id } = req.params;
 
-    // لو الفرع مستخدم في فورمات/يوزرز رجّع 409
-    const usedInForms = await Form.exists({ branch: id });
-    const usedInUsers = await User.exists({ assignedBranches: id });
-    if (usedInForms || usedInUsers) {
-      return res.status(409).json({ message: "Branch in use" });
-    }
+    // امسح كل الفورمز المرتبطة بالفرع
+    await Form.deleteMany({ branch: id });
 
+    // شيل الفرع من اليوزرز
+    await User.updateMany(
+      { assignedBranches: id },
+      { $pull: { assignedBranches: id } }
+    );
+
+    // امسح الفرع نفسه
     const removed = await Branch.findByIdAndDelete(id);
     if (!removed) return res.status(404).json({ message: "Branch not found" });
 
-    return res.status(204).send(); // أو res.json({ success: true })
+    return res.json({ message: "Branch and related data deleted successfully" });
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }

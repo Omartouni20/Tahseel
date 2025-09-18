@@ -4,7 +4,7 @@ const { protect } = require("../middleware/authMiddleware");
 const { authorizeRoles } = require("../middleware/roleMiddleware");
 const { getReports } = require("../controllers/reportController");
 
-// 🟢 Admin بس يجيب تقارير
-router.get("/", protect, authorizeRoles("Admin"), getReports);
+// 🟢 Admin + BranchManager
+router.get("/", protect, authorizeRoles("Admin", "BranchManager"), getReports);
 
 module.exports = router;

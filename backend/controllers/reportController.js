@@ -9,7 +9,14 @@ const getReports = async (req, res) => {
     const { branchId, startDate, endDate, format } = req.query;
 
     const filters = { status: "released" };
-    if (branchId) filters.branch = branchId;
+
+    // ✅ BranchManager يشوف فقط الفروع المخصصة له
+    if (req.user.role === "BranchManager") {
+      filters.branch = { $in: req.user.assignedBranches || [] };
+    } else if (branchId) {
+      filters.branch = branchId;
+    }
+
     if (startDate || endDate) {
       filters.formDate = {};
       if (startDate) filters.formDate.$gte = new Date(startDate);
@@ -26,7 +33,11 @@ const getReports = async (req, res) => {
       apps: forms.reduce((s, f) => s + (f.appsTotal || 0), 0),
       petty: forms.reduce((s, f) => s + (f.pettyCash || 0), 0),
       purchases: forms.reduce((s, f) => s + (f.purchases || 0), 0),
-      totalSales: forms.reduce((s, f) => s + (f.totalSales || 0), 0),
+      totalSales: forms.reduce(
+        (s, f) =>
+          s + ((f.totalSales || 0) - (f.pettyCash || 0) - (f.purchases || 0)),
+        0
+      ),
       actualSales: forms.reduce((s, f) => s + (f.actualSales || 0), 0),
     };
 
@@ -51,6 +62,9 @@ const getReports = async (req, res) => {
       ];
 
       forms.forEach(f => {
+        const salesOnly =
+          (f.totalSales || 0) - (f.pettyCash || 0) - (f.purchases || 0);
+
         sheet.addRow({
           user: f.user.name,
           branch: f.branch.name,
@@ -60,15 +74,21 @@ const getReports = async (req, res) => {
           apps: f.appsTotal,
           petty: f.pettyCash,
           purchases: f.purchases,
-          totalSales: f.totalSales,
+          totalSales: salesOnly,
           actualSales: f.actualSales,
           notes: f.notes || "",
         });
       });
 
       const buffer = await workbook.xlsx.writeBuffer();
-      res.setHeader("Content-Type", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      res.setHeader("Content-Disposition", "attachment; filename=reports.xlsx");
+      res.setHeader(
+        "Content-Type",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+      );
+      res.setHeader(
+        "Content-Disposition",
+        "attachment; filename=reports.xlsx"
+      );
       return res.send(buffer);
     }
 
@@ -81,9 +101,22 @@ const getReports = async (req, res) => {
       doc.fontSize(18).text("Reports Summary", { align: "center" }).moveDown();
 
       forms.forEach((f, idx) => {
-        doc.fontSize(12).text(
-          `${idx + 1}) User: ${f.user.name}, Branch: ${f.branch.name}, Date: ${f.formDate.toISOString().split("T")[0]}, Cash: ${f.cashCollection}, Bank: ${f.bankTotal}, Apps: ${f.appsTotal}, Total: ${f.totalSales}, Actual: ${f.actualSales}, Notes: ${f.notes || "-" }`
-        );
+        const salesOnly =
+          (f.totalSales || 0) - (f.pettyCash || 0) - (f.purchases || 0);
+
+        doc
+          .fontSize(12)
+          .text(
+            `${idx + 1}) User: ${f.user.name}, Branch: ${
+              f.branch.name
+            }, Date: ${f.formDate
+              .toISOString()
+              .split("T")[0]}, Cash: ${f.cashCollection}, Bank: ${
+              f.bankTotal
+            }, Apps: ${f.appsTotal}, Total: ${salesOnly}, Actual: ${
+              f.actualSales
+            }, Notes: ${f.notes || "-"}`
+          );
       });
 
       doc.end();
@@ -93,7 +126,6 @@ const getReports = async (req, res) => {
         });
       });
     }
-
   } catch (error) {
     return res.status(500).json({ message: error.message });
   }
