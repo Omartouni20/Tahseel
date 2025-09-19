@@ -583,7 +583,7 @@ const handleSubmit = async (e) => {
             >
               <span>{att.fileUrl.split("/").pop()}</span>
               <a
-                href={`${import.meta.env.VITE_API_URL}${att.fileUrl.replace(
+                href={`${process.env.REACT_APP_API_URL}${att.fileUrl.replace(
                   /\\\\/g,
                   "/"
                 )}`}

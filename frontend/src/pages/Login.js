@@ -18,11 +18,11 @@ export default function Login() {
     setError("");
 
     console.log("🔹 محاولة تسجيل الدخول بالبيانات:", { email, password });
-    console.log("🌍 API_URL المستخدم:", import.meta.env.VITE_API_URL);
+    console.log("🌍 API_URL المستخدم:", process.env.REACT_APP_API_URL);
 
     try {
       const res = await axios.post(
-        `${import.meta.env.VITE_API_URL}/api/auth/login`,
+        `${process.env.REACT_APP_API_URL}/api/auth/login`,
         { email, password },
         {
           headers: {

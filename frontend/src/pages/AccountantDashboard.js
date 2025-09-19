@@ -23,7 +23,7 @@ Chart.register(ArcElement, BarElement, CategoryScale, LinearScale, ChartTooltip,
 export default function AccountantDashboard() {
     // ================= 1) API =================
 const api = useApi();
-const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+const API_BASE = (process.env.REACT_APP_API_URL || "").replace(/\/+$/, "");
 
 
   // ================= 2) حالات عامة =================

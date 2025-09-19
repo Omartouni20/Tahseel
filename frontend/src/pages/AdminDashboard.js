@@ -44,7 +44,7 @@ export default function AdminDashboard() {
   // ميتاداتا سريعة (مافيهاش api)
   console.log("[ROLE]", localStorage.getItem("role"));
   console.log("[TOKEN?]", !!localStorage.getItem("token"));
-  console.log("[API_URL]", import.meta.env.VITE_API_URL);
+  console.log("[API_URL]", process.env.REACT_APP_API_URL);
 
   // API
 // API (via hook)
