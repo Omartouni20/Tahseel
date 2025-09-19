@@ -6,7 +6,7 @@ export function useApi() {
   const token = localStorage.getItem("token");
 
   // ✅ خليه يعتمد دايمًا على الـ VITE_API_URL من .env
-  const baseURL = import.meta.env.VITE_API_URL;
+const baseURL = process.env.REACT_APP_API_URL;
 
   // نِنشئ axios instance مرة واحدة حسب الـ token
   const api = useMemo(() => {
