@@ -1,7 +1,8 @@
 // src/pages/AccountantDashboard.jsx
 import { useEffect, useMemo, useState } from "react";
-import axios from "axios";
+//import axios from "axios";
 import { LogOut, Filter, Search, CheckCircle2, XCircle, Clock3, FileText } from "lucide-react";
+import { useApi } from "../hooks/useApi";
 
 // ===== Chart.js setup =====
 import {
@@ -20,17 +21,10 @@ import { Pie, Bar, Line } from "react-chartjs-2";
 Chart.register(ArcElement, BarElement, CategoryScale, LinearScale, ChartTooltip, ChartLegend, LineElement, PointElement, Filler);
 
 export default function AccountantDashboard() {
-  // ================= 1) API =================
-  const token = localStorage.getItem("token");
-  const api = useMemo(
-    () =>
-      axios.create({
-        baseURL: "http://localhost:5000",
-        headers: { Authorization: `Bearer ${token}` },
-      }),
-    [token]
-  );
-  const API_BASE = api.defaults.baseURL?.replace(/\/+$/, "") || "";
+    // ================= 1) API =================
+const api = useApi();
+const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/+$/, "");
+
 
   // ================= 2) حالات عامة =================
   const [branches, setBranches] = useState([]);

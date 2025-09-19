@@ -5,13 +5,16 @@ import axios from "axios";
 export function useApi() {
   const token = localStorage.getItem("token");
 
+  // ✅ خليه يعتمد دايمًا على الـ VITE_API_URL من .env
+  const baseURL = import.meta.env.VITE_API_URL;
+
   // نِنشئ axios instance مرة واحدة حسب الـ token
   const api = useMemo(() => {
     return axios.create({
-      baseURL: import.meta.env?.VITE_API_URL || "http://localhost:5000",
-      headers: { Authorization: `Bearer ${token}` },
+      baseURL,
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
-  }, [token]);
+  }, [token, baseURL]);
 
   // Interceptors + لوجز تشخيص على كل request/response
   useEffect(() => {
@@ -39,8 +42,7 @@ export function useApi() {
       console.log("[API←] Res", id, response.config.url, {
         status: response.status,
         count: Array.isArray(response.data) ? response.data.length : null,
-        // شيل الكومنت ده لو عايز تشوف الداتا كاملة:
-        // data: response.data,
+        // data: response.data, // شيل الكومنت لو عايز تشوف الداتا كاملة
       });
       return response;
     };

@@ -49,7 +49,7 @@ export default function UserDashboard() {
   // ---------------- إعدادات API ----------------
   const token = localStorage.getItem("token");
   const api = axios.create({
-    baseURL: "http://localhost:5000",
+  baseURL: import.meta.env.VITE_API_URL,
     headers: { Authorization: `Bearer ${token}` },
   });
 
@@ -569,45 +569,46 @@ const handleSubmit = async (e) => {
           )}
         </section>
 
-        {/* Modal المرفقات */}
-        {selectedAttachments && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4">
-            <div className="bg-white p-6 rounded-2xl w-full max-w-md relative shadow-2xl">
-              <h3 className="text-lg font-bold mb-4">المرفقات</h3>
-              {selectedAttachments.length > 0 ? (
-                <ul className="space-y-2">
-                  {selectedAttachments.map((att) => (
-                    <li
-                      key={att._id}
-                      className="flex justify-between items-center border-b pb-2"
-                    >
-                      <span>{att.fileUrl.split("/").pop()}</span>
-                      <a
-                        href={`http://localhost:5000${att.fileUrl.replace(
-                          /\\\\/g,
-                          "/"
-                        )}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-blue-600 underline"
-                      >
-                        فتح
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-gray-600">لا يوجد مرفقات</p>
-              )}
-              <button
-                onClick={() => setSelectedAttachments(null)}
-                className="mt-4 w-full bg-gray-900 text-white py-2 rounded-xl hover:opacity-95"
+{/* Modal المرفقات */}
+{selectedAttachments && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black/50 p-4">
+    <div className="bg-white p-6 rounded-2xl w-full max-w-md relative shadow-2xl">
+      <h3 className="text-lg font-bold mb-4">المرفقات</h3>
+      {selectedAttachments.length > 0 ? (
+        <ul className="space-y-2">
+          {selectedAttachments.map((att) => (
+            <li
+              key={att._id}
+              className="flex justify-between items-center border-b pb-2"
+            >
+              <span>{att.fileUrl.split("/").pop()}</span>
+              <a
+                href={`${import.meta.env.VITE_API_URL}${att.fileUrl.replace(
+                  /\\\\/g,
+                  "/"
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-600 underline"
               >
-                إغلاق
-              </button>
-            </div>
-          </div>
-        )}
+                فتح
+              </a>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className="text-gray-600">لا يوجد مرفقات</p>
+      )}
+      <button
+        onClick={() => setSelectedAttachments(null)}
+        className="mt-4 w-full bg-gray-900 text-white py-2 rounded-xl hover:opacity-95"
+      >
+        إغلاق
+      </button>
+    </div>
+  </div>
+)}
+
       </main>
     </div>
   );
