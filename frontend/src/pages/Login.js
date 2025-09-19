@@ -16,11 +16,22 @@ export default function Login() {
     e.preventDefault();
     setLoading(true);
     setError("");
+
+    console.log("🔹 محاولة تسجيل الدخول بالبيانات:", { email, password });
+    console.log("🌍 API_URL المستخدم:", import.meta.env.VITE_API_URL);
+
     try {
-const res = await axios.post(
-  `${import.meta.env.VITE_API_URL}/api/auth/login`,
-  { email, password }
-);
+      const res = await axios.post(
+        `${import.meta.env.VITE_API_URL}/api/auth/login`,
+        { email, password },
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      console.log("✅ رد السيرفر:", res.data);
 
       // حفظ التوكن والدور والاسم (لو متاح)
       localStorage.setItem("token", res.data.token);
@@ -35,9 +46,10 @@ const res = await axios.post(
       else if (res.data.role === "Admin") navigate("/admin");
       else if (res.data.role === "BranchManager") navigate("/branch-manager"); // ✅ جديد
       else navigate("/");
-
-    } catch (error) {
-      setError(error.response?.data?.message || "Login failed");
+    } catch (err) {
+      console.error("❌ خطأ أثناء تسجيل الدخول:", err);
+      console.error("📩 تفاصيل الخطأ:", err.response?.data);
+      setError(err.response?.data?.message || "Login failed");
     } finally {
       setLoading(false);
     }
@@ -57,7 +69,9 @@ const res = await axios.post(
               <LogIn size={20} />
             </div>
             <h2 className="mt-3 text-2xl font-bold tracking-tight">تسجيل الدخول</h2>
-            <p className="text-sm text-gray-500 mt-1">أهلاً بيك! من فضلك أدخل البريد وكلمة السر</p>
+            <p className="text-sm text-gray-500 mt-1">
+              أهلاً بيك! من فضلك أدخل البريد وكلمة السر
+            </p>
           </div>
 
           {/* رسالة الخطأ */}
@@ -91,7 +105,11 @@ const res = await axios.post(
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
-              <button type="button" onClick={() => setShowPass((s) => !s)} className="text-gray-500 hover:text-gray-700">
+              <button
+                type="button"
+                onClick={() => setShowPass((s) => !s)}
+                className="text-gray-500 hover:text-gray-700"
+              >
                 {showPass ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
