@@ -123,21 +123,33 @@ const handleSubmit = async (e) => {
       .filter((x) => x.templateId && Number(x.amount) > 0)
       .map((x) => ({ template: x.templateId, name: x.name, amount: Number(x.amount) }));
 
-    const payload = {
-      ...formData,
-      formDate: new Date(formData.formDate),
-      applications: appsPayload,
-      bankCollections: bankPayload,
-      appsCollection: appsTotal,
-      // ❌ شيل bankMada و bankVisa عشان ما يضيفوش مرتين
-    };
+    // ✅ FormData instead of JSON
+    const fd = new FormData();
+    fd.append("formDate", new Date(formData.formDate).toISOString());
+    fd.append("branch", formData.branch);
+    fd.append("pettyCash", formData.pettyCash);
+    fd.append("purchases", formData.purchases);
+    fd.append("cashCollection", formData.cashCollection);
+    fd.append("actualSales", formData.actualSales);
+    fd.append("notes", formData.notes);
 
-    console.log("📤 Payload to API:", payload);
+    fd.append("applications", JSON.stringify(appsPayload));
+    fd.append("bankCollections", JSON.stringify(bankPayload));
+    fd.append("appsCollection", appsTotal);
 
-    const res = await api.post("/api/forms", payload);
+    // ✅ attach files
+    if (files.petty) fd.append("pettyFile", files.petty);
+    if (files.purchase) fd.append("purchaseFile", files.purchase);
+    if (files.cash) fd.append("cashFile", files.cash);
+
+    console.log("📤 Payload to API (FormData)", [...fd.entries()]);
+
+    const res = await api.post("/api/forms", fd, {
+      headers: { "Content-Type": "multipart/form-data" },
+    });
     console.log("✅ Response from API:", res.data);
 
-    // Reset form بعد الحفظ
+    // Reset after save
     setForms((prev) => [...prev, res.data]);
     setFormData((d) => ({
       ...d,
